@@ -14,6 +14,7 @@ export interface DistributableQuota {
   remaining: number;
   expiresAt: string | null;
 }
+
 export interface AppUser {
   id: string;
   name: string;
@@ -23,6 +24,7 @@ export interface AppUser {
   totalPoints: number;
   distributableQuota: DistributableQuota;
 }
+
 export interface PointsData {
   id: string;
   userId: string;
@@ -76,9 +78,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const loggedInUser = allUsers.find(u => u.id === auth.currentUser!.uid) || null;
         setCurrentUser(loggedInUser);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Erro ao buscar dados da aplicação:", error);
-      toast.error("Não foi possível carregar os dados do sistema.");
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Não foi possível carregar os dados do sistema.");
+      }
     }
   }, []);
 
@@ -99,7 +105,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async (): Promise<void> => await signOut(auth);
 
-  const grantPoints = async (userId: string, amount: number, description: string, isQuota: boolean): Promise<void> => {
+  const grantPoints = async (
+    userId: string,
+    amount: number,
+    description: string,
+    isQuota: boolean
+  ): Promise<void> => {
     try {
       const app = getApp();
       const functions = getFunctions(app, 'southamerica-east1');
@@ -107,19 +118,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       toast.info("Processando concessão de pontos...");
       const result = await grantPointsCallable({ userId, amount, description, isQuota });
-      const data = result.data as { success: boolean, message: string };
+      const data = result.data as { success: boolean; message: string };
 
       if (data.success) {
         toast.success(data.message);
         await refreshData();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao chamar a Cloud Function grantPoints:", error);
-      toast.error(error.message || "Ocorreu um erro ao conceder os pontos.");
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Ocorreu um erro ao conceder os pontos.");
+      }
     }
   };
 
-  const transferPoints = async (receiverId: string, amount: number, description: string): Promise<void> => {
+  const transferPoints = async (
+    receiverId: string,
+    amount: number,
+    description: string
+  ): Promise<void> => {
     try {
       const app = getApp();
       const functions = getFunctions(app, 'southamerica-east1');
@@ -127,63 +146,86 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       
       toast.info("Processando transferência...");
       const result = await transferPointsCallable({ receiverId, amount, description });
-      const data = result.data as { success: boolean, message: string };
+      const data = result.data as { success: boolean; message: string };
 
       if (data.success) {
         toast.success(data.message);
         await refreshData();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao chamar a Cloud Function transferPoints:", error);
-      toast.error(error.message || "Ocorreu um erro na transferência.");
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Ocorreu um erro na transferência.");
+      }
     }
   };
   
   const updateUserProfile = async (name: string): Promise<void> => {
     try {
-        const app = getApp();
-        const functions = getFunctions(app, 'southamerica-east1');
-        const updateUserCallable = httpsCallable(functions, 'updateUserProfile');
+      const app = getApp();
+      const functions = getFunctions(app, 'southamerica-east1');
+      const updateUserCallable = httpsCallable(functions, 'updateUserProfile');
 
-        toast.info("Atualizando perfil...");
-        const result = await updateUserCallable({ name });
-        const data = result.data as { success: boolean, message: string };
+      toast.info("Atualizando perfil...");
+      const result = await updateUserCallable({ name });
+      const data = result.data as { success: boolean; message: string };
 
-        if (data.success) {
-            toast.success(data.message);
-            await refreshData();
-        }
-    } catch (error: any) {
-        console.error("Erro ao chamar a Cloud Function updateUserProfile:", error);
-        toast.error(error.message || "Ocorreu um erro ao atualizar o perfil.");
+      if (data.success) {
+        toast.success(data.message);
+        await refreshData();
+      }
+    } catch (error: unknown) {
+      console.error("Erro ao chamar a Cloud Function updateUserProfile:", error);
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Ocorreu um erro ao atualizar o perfil.");
+      }
     }
   };
   
-  const updateUserByAdmin = async (userId: string, name: string, role: "administrador" | "colaborador"): Promise<void> => {
+  const updateUserByAdmin = async (
+    userId: string,
+    name: string,
+    role: "administrador" | "colaborador"
+  ): Promise<void> => {
     try {
       const app = getApp();
       const functions = getFunctions(app, 'southamerica-east1');
       const updateUserCallable = httpsCallable(functions, 'updateUserByAdmin');
 
       toast.info(`Atualizando perfil de ${name}...`);
-      
       const result = await updateUserCallable({ userId, name, role });
-      const data = result.data as { success: boolean, message: string };
+      const data = result.data as { success: boolean; message: string };
 
       if (data.success) {
         toast.success(data.message);
         await refreshData();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao chamar a Cloud Function updateUserByAdmin:", error);
-      toast.error(error.message || "Ocorreu um erro ao atualizar o usuário.");
+      if (error instanceof Error) {
+        toast.error(error.message);
+      } else {
+        toast.error("Ocorreu um erro ao atualizar o usuário.");
+      }
     }
   };
 
-  const value = {
-    currentUser, users, pointsHistory, isAdmin, loading,
-    logout, grantPoints, transferPoints, updateUserProfile,
-    refreshData, updateUserByAdmin,
+  const value: AppContextType = {
+    currentUser,
+    users,
+    pointsHistory,
+    isAdmin,
+    loading,
+    logout,
+    grantPoints,
+    transferPoints,
+    updateUserProfile,
+    refreshData,
+    updateUserByAdmin,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

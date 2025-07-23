@@ -5,6 +5,7 @@ import { LoginForm } from "@/components/login-form";
 import { login } from "@/utils/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,11 +18,12 @@ export default function LoginPage() {
     try {
       await login(email, password);
       router.push("/dashboard");
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao tentar logar.";
       setError(
-        err?.message === "Firebase: Error (auth/user-not-found)." ? "Usuário não encontrado." :
-        err?.message === "Firebase: Error (auth/wrong-password)." ? "Senha incorreta." :
-        err?.message || "Erro ao tentar logar."
+        message === "Firebase: Error (auth/user-not-found)." ? "Usuário não encontrado." :
+        message === "Firebase: Error (auth/wrong-password)." ? "Senha incorreta." :
+        message
       );
     } finally {
       setLoading(false);
@@ -50,10 +52,12 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
-        <img
+        <Image
           src="/harperpoints.png"
-          alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          alt="Imagem de fundo"
+          fill
+          className="object-cover dark:brightness-[0.2] dark:grayscale"
+          priority
         />
       </div>
     </div>

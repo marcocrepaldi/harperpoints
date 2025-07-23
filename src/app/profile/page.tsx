@@ -1,28 +1,27 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAppContext } from "@/context/app-context";
 import Link from "next/link";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/utils/firebase";
+import { db, auth } from "@/utils/firebase";
 import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/utils/firebase";
 
 // --- Imports de UI ---
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+// 'CardFooter' foi removido da linha abaixo pois não estava em uso.
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Camera } from "lucide-react";
 import { toast } from "sonner";
 
-const getInitials = (name: string) => {
+// Função para obter as iniciais do nome
+const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
-  const names = name.split(' ');
-  const initials = names.map(n => n[0]).join('');
-  return initials.toUpperCase().slice(0, 2);
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 };
 
 export default function ProfilePage() {
@@ -36,27 +35,40 @@ export default function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (currentUser) setName(currentUser.name);
+    if (currentUser) {
+      setName(currentUser.name);
+    }
   }, [currentUser]);
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  // Função para atualizar o nome do perfil
+  const handleUpdateProfile = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || name.trim() === currentUser?.name) return;
+    if (!currentUser || !name.trim() || name.trim() === currentUser.name) return;
+
     setIsLoading(true);
-    await updateUserProfile(name.trim());
-    setIsLoading(false);
-  };
+    toast.info("Salvando alterações...");
+    try {
+      await updateUserProfile(name.trim());
+    } catch (error) { // 'error' é usado aqui para depuração
+      toast.error("Não foi possível salvar as alterações.");
+      console.error("Erro ao atualizar perfil:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [currentUser, name, updateUserProfile]);
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0 || !currentUser) return;
-    const file = e.target.files[0];
-    const storage = getStorage();
-    const photoRef = ref(storage, `profile-pictures/${currentUser.id}`);
-
+  // Função para fazer o upload da foto
+  const handlePhotoUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser) return;
+    
     setIsUploading(true);
     toast.info("Enviando nova foto...");
 
     try {
+      const storage = getStorage();
+      const photoRef = ref(storage, `profile-pictures/${currentUser.id}`);
+      
       const uploadResult = await uploadBytes(photoRef, file);
       const photoURL = await getDownloadURL(uploadResult.ref);
       
@@ -65,27 +77,39 @@ export default function ProfilePage() {
 
       toast.success("Avatar atualizado com sucesso!");
       await refreshData();
-    } catch (error) {
+    } catch (error) { // 'error' é usado aqui para depuração
       toast.error("Erro ao enviar a foto.");
+      console.error("Erro no upload:", error);
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
-  };
+  }, [currentUser, refreshData]);
 
-  const handlePasswordReset = async () => {
+  // Função para redefinir a senha
+  const handlePasswordReset = useCallback(async () => {
     if (!currentUser?.email) return toast.error("E-mail não encontrado.");
+    
     setIsSendingEmail(true);
     try {
       await sendPasswordResetEmail(auth, currentUser.email);
       toast.success("E-mail de redefinição enviado!", { description: "Verifique sua caixa de entrada e spam." });
-    } catch (error) {
+    } catch { // A variável 'error' foi removida aqui pois não estava em uso
       toast.error("Não foi possível enviar o e-mail.");
     } finally {
       setIsSendingEmail(false);
     }
-  };
+  }, [currentUser?.email]);
   
-  if (!currentUser) return <div className="flex h-screen w-full items-center justify-center"><p>Carregando...</p></div>;
+  if (!currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Carregando...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full flex-col items-center bg-muted/40 p-4 pt-8 md:pt-12">
@@ -108,14 +132,16 @@ export default function ProfilePage() {
                   <AvatarImage src={currentUser.photoURL} alt={currentUser.name} />
                   <AvatarFallback className="text-3xl">{getInitials(currentUser.name)}</AvatarFallback>
                 </Avatar>
-                <div className="pointer-events-none absolute bottom-0 right-0 rounded-full bg-primary p-1.5 text-primary-foreground"><Camera className="size-4" /></div>
+                <div className="pointer-events-none absolute bottom-0 right-0 rounded-full bg-primary p-1.5 text-primary-foreground">
+                  <Camera className="size-4" />
+                </div>
                 <input type="file" ref={fileInputRef} hidden accept="image/png, image/jpeg" onChange={handlePhotoUpload} disabled={isUploading} />
               </div>
             </div>
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div className="grid w-full gap-1.5">
                 <Label htmlFor="name">Nome completo</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isUploading} />
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isLoading || isUploading} />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="email">E-mail</Label>

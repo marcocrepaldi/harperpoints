@@ -1,18 +1,22 @@
-// Arquivo: app/register/page.tsx (ou onde sua página estiver)
-
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link"; // 1. Importando o Link do Next.js
+import Link from "next/link";
 import { register } from "@/utils/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"; // 2. Importando CardDescription
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
 
 export default function RegisterPage() {
-  const [name, setName] = useState(""); // 3. Adicionando estado para o nome
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,11 +28,11 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     try {
-      // 4. Passando o nome para a função de registro
       await register(name, email, password);
       router.push("/dashboard");
-    } catch (e: any) {
-      setError(e?.message || "Erro ao cadastrar.");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Erro ao cadastrar.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -39,12 +43,12 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Primeiro Acesso</CardTitle>
-          {/* 5. Adicionando uma descrição para melhor UX */}
-          <CardDescription>Crie sua conta para começar a usar o Harper Points.</CardDescription>
+          <CardDescription>
+            Crie sua conta para começar a usar o Harper Points.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
-            {/* 6. Adicionando o campo de Nome no formulário */}
             <div>
               <Label htmlFor="name">Nome completo</Label>
               <Input
@@ -53,7 +57,7 @@ export default function RegisterPage() {
                 required
                 autoComplete="name"
                 value={name}
-                onChange={e => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value)}
                 placeholder="Seu nome e sobrenome"
               />
             </div>
@@ -65,7 +69,7 @@ export default function RegisterPage() {
                 required
                 autoComplete="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu.nome@harper.com"
               />
             </div>
@@ -78,7 +82,7 @@ export default function RegisterPage() {
                 minLength={6}
                 autoComplete="new-password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Mínimo 6 caracteres"
               />
             </div>
@@ -90,8 +94,10 @@ export default function RegisterPage() {
             </Button>
             <div className="text-center text-sm text-muted-foreground pt-2">
               Já tem uma conta?{" "}
-              {/* 7. Usando o componente Link para navegação */}
-              <Link href="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link
+                href="/login"
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+              >
                 Faça login
               </Link>
             </div>

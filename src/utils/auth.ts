@@ -1,5 +1,3 @@
-// Arquivo: src/utils/auth.ts (versão final)
-
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { getApp } from "firebase/app";
@@ -15,8 +13,11 @@ export async function login(email: string, password: string) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
-  } catch (error: any) {
-    throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error("Ocorreu um erro inesperado ao fazer login.");
   }
 }
 
@@ -31,18 +32,16 @@ export async function register(name: string, email: string, password: string) {
 
   try {
     const app = getApp();
-    // Aponta para a região correta das suas funções
-    const functions = getFunctions(app, 'southamerica-east1');
-    const registerUserCallable = httpsCallable(functions, 'registerUser');
+    const functions = getFunctions(app, "southamerica-east1");
+    const registerUserCallable = httpsCallable(functions, "registerUser");
 
-    // Chama a função de backend com os dados do formulário
     await registerUserCallable({ name, email, password });
 
-    // Após o cadastro bem-sucedido, faz o login automaticamente
     return await login(email, password);
-    
-  } catch (error: any) {
-    // Repassa o erro da Cloud Function para ser exibido na tela
-    throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(error.message);
+    }
+    throw new Error("Ocorreu um erro inesperado ao registrar o usuário.");
   }
 }

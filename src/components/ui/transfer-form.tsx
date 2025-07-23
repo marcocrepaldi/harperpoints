@@ -6,7 +6,13 @@ import { collection, getDocs, addDoc, Timestamp } from "firebase/firestore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type UserOption = {
@@ -14,8 +20,14 @@ type UserOption = {
   email: string;
 };
 
-export function TransferForm({ saldo, onTransfer }: { saldo: number, onTransfer: () => void }) {
-  const { user } = useAppContext();
+export function TransferForm({
+  saldo,
+  onTransfer,
+}: {
+  saldo: number;
+  onTransfer: () => void;
+}) {
+  const { currentUser: user } = useAppContext();
   const [users, setUsers] = useState<UserOption[]>([]);
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
@@ -28,8 +40,8 @@ export function TransferForm({ saldo, onTransfer }: { saldo: number, onTransfer:
       if (!user) return;
       const snap = await getDocs(collection(db, "users"));
       const opts: UserOption[] = [];
-      snap.forEach(doc => {
-        if (doc.id !== user.uid) { // não mostra ele mesmo
+      snap.forEach((doc) => {
+        if (doc.id !== user.id) {
           const data = doc.data();
           opts.push({ uid: doc.id, email: data.email });
         }
@@ -39,7 +51,7 @@ export function TransferForm({ saldo, onTransfer }: { saldo: number, onTransfer:
     fetchUsers();
   }, [user]);
 
-  async function handleTransfer(e: React.FormEvent) {
+  async function handleTransfer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMsg(null);
     if (!user) return;
@@ -60,7 +72,7 @@ export function TransferForm({ saldo, onTransfer }: { saldo: number, onTransfer:
     try {
       await addDoc(collection(db, "points"), {
         type: "transfer",
-        from: user.uid,
+        from: user.id,
         to,
         amount: pontos,
         createdAt: Timestamp.now(),
@@ -70,8 +82,8 @@ export function TransferForm({ saldo, onTransfer }: { saldo: number, onTransfer:
       setTo("");
       setAmount("");
       setDescription("");
-      onTransfer?.(); // Para atualizar a lista
-    } catch (e: any) {
+      onTransfer?.();
+    } catch { // A variável 'err' foi removida aqui, pois não estava em uso.
       setMsg("Erro ao transferir pontos.");
     } finally {
       setLoading(false);
@@ -87,7 +99,7 @@ export function TransferForm({ saldo, onTransfer }: { saldo: number, onTransfer:
             <SelectValue placeholder="Selecione um colega" />
           </SelectTrigger>
           <SelectContent>
-            {users.map(opt => (
+            {users.map((opt) => (
               <SelectItem key={opt.uid} value={opt.uid}>
                 {opt.email}
               </SelectItem>
@@ -102,7 +114,7 @@ export function TransferForm({ saldo, onTransfer }: { saldo: number, onTransfer:
           min={1}
           max={saldo}
           value={amount}
-          onChange={e => setAmount(e.target.value)}
+          onChange={(e) => setAmount(e.target.value)}
           placeholder="0"
         />
         <div className="text-xs text-muted-foreground mt-1">
@@ -113,13 +125,16 @@ export function TransferForm({ saldo, onTransfer }: { saldo: number, onTransfer:
         <Label>Descrição (opcional)</Label>
         <Textarea
           value={description}
-          onChange={e => setDescription(e.target.value)}
+          onChange={(e) => setDescription(e.target.value)}
           placeholder="Motivo da transferência (opcional)"
           rows={2}
         />
       </div>
       {msg && <div className="text-sm text-muted-foreground">{msg}</div>}
-      <Button type="submit" disabled={loading || !to || !amount || Number(amount) > saldo}>
+      <Button
+        type="submit"
+        disabled={loading || !to || !amount || Number(amount) > saldo}
+      >
         {loading ? "Enviando..." : "Transferir pontos"}
       </Button>
     </form>
