@@ -19,3 +19,6 @@ pnpm-debug.log*
 
 # Arquivos do sistema
 .DS_Store
+
+package-lock.json
+pnpm-lock.yaml
